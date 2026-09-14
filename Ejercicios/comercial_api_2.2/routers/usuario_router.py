@@ -1,12 +1,24 @@
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, status, Query
 from sqlmodel import select
+from sqlalchemy.exc import IntegrityError
 from config.session_Dependencia import SessionDeDependencia
 from models.rol import Rol
-from models.usuario import Usuario, UsuarioCreate, UsuarioUpdate
+from models.usuario import Usuario, UsuarioCreate, UsuarioUpdate, UsuarioUpdatePatch
 from lib.pwd import get_password_hash
 
 router = APIRouter()
+
+
+def validar_username_disponible(session, username: str, id_usuario: int | None = None):
+    consulta = select(Usuario).where(Usuario.username == username)
+    if id_usuario is not None:
+        consulta = consulta.where(Usuario.id != id_usuario)
+    if session.exec(consulta).first():
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="El username ya está registrado"
+        )
 
 
 @router.get("/usuarios", response_model=list[Usuario], status_code=status.HTTP_200_OK)
@@ -29,6 +41,8 @@ async def get_usuario(id: int, session: SessionDeDependencia):
 
 @router.post("/usuarios", response_model=Usuario, status_code=status.HTTP_201_CREATED)
 async def create_usuario(datos_usuario: UsuarioCreate, session: SessionDeDependencia):
+    validar_username_disponible(session, datos_usuario.username)
+
     rol = session.exec(select(Rol).where(
         Rol.id == datos_usuario.id_rol)).first()
     if not rol:
@@ -45,7 +59,14 @@ async def create_usuario(datos_usuario: UsuarioCreate, session: SessionDeDepende
         id_rol=datos_usuario.id_rol,
     )
     session.add(usuario_nuevo)
-    session.commit()
+    try:
+        session.commit()
+    except IntegrityError:
+        session.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="El username ya está registrado"
+        )
     session.refresh(usuario_nuevo)
     return usuario_nuevo
 
@@ -61,48 +82,11 @@ async def delete_usuario(id: int, session: SessionDeDependencia):
     return None
 
 
-@router.patch("/usuarios/{id}", response_model=Usuario, status_code=status.HTTP_200_OK)
-async def patch_usuario(id: int, datos_usuario: UsuarioUpdatePatch, session: SessionDeDependencia):
-    consulta = select(Usuario).where(Usuario.id == id)
-    usuario = session.exec(consulta).first()
-    if not usuario:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-
-    if datos_usuario.id_rol is not None:
-        rol = session.exec(select(Rol).where(
-            Rol.id == datos_usuario.id_rol)).first()
-        if not rol:
-            raise HTTPException(
-                status_code=404, detail=f"Rol con id {datos_usuario.id_rol} no encontrado")
-        usuario.id_rol = datos_usuario.id_rol
-
-    if datos_usuario.username is not None:
-        usuario.username = datos_usuario.username
-    if datos_usuario.password is not None:
-        usuario.password = get_password_hash(datos_usuario.password)
-    if datos_usuario.nombre is not None:
-        usuario.nombre = datos_usuario.nombre
-    if datos_usuario.apellido is not None:
-        usuario.apellido = datos_usuario.apellido
-    if datos_usuario.telefono is not None:
-        usuario.telefono = datos_usuario.telefono
-    if datos_usuario.correo is not None:
-        usuario.correo = datos_usuario.correo
-    if datos_usuario.correo is None and hasattr(datos_usuario, "correo"):
-        usuario.correo = None
-
-    usuario.updated_at = datetime.utcnow()
-
-    session.add(usuario)
-    session.commit()
-    session.refresh(usuario)
-    return usuario
-
-
 @router.put("/usuarios/{id}", response_model=Usuario, status_code=status.HTTP_200_OK)
 async def update_usuario(id: int, datos_usuario: UsuarioUpdate, session: SessionDeDependencia):
     consulta = select(Usuario).where(Usuario.id == id)
     resultado = session.exec(consulta).first()
+
     if not resultado:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
@@ -112,12 +96,16 @@ async def update_usuario(id: int, datos_usuario: UsuarioUpdate, session: Session
         raise HTTPException(
             status_code=404, detail=f"Rol con id {datos_usuario.id_rol} no encontrado")
 
+    validar_username_disponible(session, datos_usuario.username, id)
     resultado.username = datos_usuario.username
     resultado.password = get_password_hash(datos_usuario.password)
     resultado.nombre = datos_usuario.nombre
     resultado.apellido = datos_usuario.apellido
     resultado.telefono = datos_usuario.telefono
-    resultado.correo = datos_usuario.correo
+
+    if datos_usuario.correo:
+        resultado.correo = datos_usuario.correo
+
     resultado.id_rol = datos_usuario.id_rol
     resultado.updated_at = datetime.utcnow()
 
@@ -128,16 +116,33 @@ async def update_usuario(id: int, datos_usuario: UsuarioUpdate, session: Session
 
 
 @router.patch('/usuarios/{id}', response_model=Usuario, status_code=status.HTTP_200_OK)
-async def patch_usuario(id: int, datos_usuario: UsuarioUpdate, session: SessionDeDependencia):
+async def patch_usuario(id: int, datos_usuario: UsuarioUpdatePatch, session: SessionDeDependencia):
     consulta = select(Usuario).where(Usuario.id == id)
     resultado = session.exec(consulta).first()
+
     if not resultado:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
 
-    if datos_usuario.correo:
-        resultado.correo = datos_usuario.correo
+    if datos_usuario.id_rol:
+        rol = session.exec(select(Rol).where(
+            Rol.id == datos_usuario.id_rol)).first()
+        if not rol:
+            raise HTTPException(
+                status_code=404, detail=f"Rol con id {datos_usuario.id_rol} no encontrado")
 
-    resultado.password = get_password_hash(password)
+    if (datos_usuario.username is not None
+            and datos_usuario.username != resultado.username):
+        validar_username_disponible(session, datos_usuario.username, id)
+
+    datos_actualizados = datos_usuario.model_dump(exclude_unset=True)
+    if "password" in datos_actualizados:
+        datos_actualizados["password"] = get_password_hash(
+            datos_actualizados["password"]
+        )
+
+    resultado.sqlmodel_update(datos_actualizados)
+    resultado.updated_at = datetime.utcnow()
+
     session.add(resultado)
     session.commit()
     session.refresh(resultado)

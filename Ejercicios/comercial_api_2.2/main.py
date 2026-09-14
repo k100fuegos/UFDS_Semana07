@@ -9,6 +9,7 @@ from routers.cliente_router import router as clientes_router
 from routers.tipo_pago_router import router as tipos_pago_router
 from routers.venta_router import router as ventas_router
 from routers.detalle_venta_router import router as detalle_ventas_router
+from oauth.oauth import router as oauth_router
 import models
 
 
@@ -34,3 +35,4 @@ app.include_router(clientes_router, tags=["clientes"])
 app.include_router(tipos_pago_router, tags=["tipos-pago"])
 app.include_router(ventas_router, tags=["ventas"])
 app.include_router(detalle_ventas_router, tags=["detalle-ventas"])
+app.include_router(oauth_router, tags=["oauth"])

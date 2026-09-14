@@ -3,16 +3,20 @@ from fastapi import APIRouter, HTTPException, status, Query
 from models.categoria import Categoria, CategoriaCreate, CategoriaUpdate
 from sqlmodel import select
 from config.session_Dependencia import SessionDeDependencia
+from config.security_Dependencia import Token_Dependencia
 
 router = APIRouter()
 
 
 @router.get("/categorias", response_model=list[Categoria], status_code=status.HTTP_200_OK)
 async def get_categorias(session: SessionDeDependencia,
-
+                         token: Token_Dependencia,
                          offset: int = Query(0, ge=0),
                          limit: int = Query(20, ge=1)):
 
+    if token['id_rol'] != 1:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="No tienes permisos para acceder a esta information")
     consulta = select(Categoria)
     resultado_de_consulta = session.exec(consulta)
     return resultado_de_consulta.all()

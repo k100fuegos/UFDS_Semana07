@@ -5,7 +5,8 @@ from typing import Optional
 
 
 class UsuarioBase(SQLModel):
-    username: str = Field(nullable=False, max_length=50, min_length=3)
+    username: str = Field(nullable=False, max_length=50, min_length=3,
+                          unique=True, index=True)
     password: str = Field(nullable=False, max_length=255, min_length=3)
     nombre: str = Field(nullable=False, max_length=255, min_length=3)
     apellido: str = Field(nullable=False, max_length=255, min_length=3)
