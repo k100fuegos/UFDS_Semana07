@@ -9,11 +9,11 @@ from config.security_Dependencia import OAuthFormDeDependencia
 router = APIRouter()
 
 
-@router.post("oauth/login", status_code=status.HTTP_200_OK)
+@router.post("/oauth/login", status_code=status.HTTP_200_OK)
 async def login(form_data: OAuthFormDeDependencia, session: SessionDeDependencia):
     username = form_data.username
 
-    consulta = select(Usuario).where(usuario.username == username)
+    consulta = select(Usuario).where(Usuario.username == username)
     usuario = session.exec(consulta).first()
 
     if not usuario:

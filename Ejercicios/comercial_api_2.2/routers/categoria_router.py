@@ -10,13 +10,8 @@ router = APIRouter()
 
 @router.get("/categorias", response_model=list[Categoria], status_code=status.HTTP_200_OK)
 async def get_categorias(session: SessionDeDependencia,
-                         token: Token_Dependencia,
                          offset: int = Query(0, ge=0),
                          limit: int = Query(20, ge=1)):
-
-    if token['id_rol'] != 1:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
-                            detail="No tienes permisos para acceder a esta information")
     consulta = select(Categoria)
     resultado_de_consulta = session.exec(consulta)
     return resultado_de_consulta.all()
@@ -24,6 +19,7 @@ async def get_categorias(session: SessionDeDependencia,
 
 @router.get("/categorias/{id}", response_model=Categoria, status_code=status.HTTP_200_OK)
 async def get_categoria(id: int, session: SessionDeDependencia):
+
     consulta = select(Categoria). where(
         Categoria.id == id
     )
@@ -34,7 +30,12 @@ async def get_categoria(id: int, session: SessionDeDependencia):
 
 
 @router.post("/categorias", response_model=Categoria, status_code=status.HTTP_201_CREATED)
-async def create_categoria(datos_categoria: CategoriaCreate, session: SessionDeDependencia):
+async def create_categoria(datos_categoria: CategoriaCreate, session: SessionDeDependencia, token: Token_Dependencia):
+
+    if token['id_rol'] != 1:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="No tienes permisos para acceder a esta information")
+
     categoria_nueva = Categoria(
         nombre=datos_categoria.nombre, descripcion=datos_categoria.descripcion
     )
@@ -45,7 +46,12 @@ async def create_categoria(datos_categoria: CategoriaCreate, session: SessionDeD
 
 
 @router.delete("/categorias/{id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_categoria(id: int, session: SessionDeDependencia):
+async def delete_categoria(id: int, session: SessionDeDependencia, token: Token_Dependencia):
+
+    if token['id_rol'] != 1:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="No tienes permisos para acceder a esta information")
+
     consulta = select(Categoria).where(
         Categoria.id == id
     )
@@ -58,7 +64,12 @@ async def delete_categoria(id: int, session: SessionDeDependencia):
 
 
 @router.put("/categorias/{id}", response_model=Categoria, status_code=status.HTTP_200_OK)
-async def update_categoria(id: int, datos_categoria: CategoriaUpdate, session: SessionDeDependencia):
+async def update_categoria(id: int, datos_categoria: CategoriaUpdate, session: SessionDeDependencia, token: Token_Dependencia):
+
+    if token['id_rol'] != 1:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="No tienes permisos para acceder a esta information")
+
     consulta = select(Categoria).where(
         Categoria.id == id
     )

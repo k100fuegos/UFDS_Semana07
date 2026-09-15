@@ -4,6 +4,7 @@ from config.session_Dependencia import SessionDeDependencia
 from models.categoria import Categoria
 from models.producto import Producto, ProductoCreate, ProductoUpdate
 from datetime import datetime
+from config.security_Dependencia import Token_Dependencia
 
 router = APIRouter()
 
@@ -32,7 +33,12 @@ def get_producto(id: int, session: SessionDeDependencia):
 
 
 @router.post("/productos", response_model=Producto, status_code=status.HTTP_201_CREATED)
-def create_producto(datos_producto: ProductoCreate, session: SessionDeDependencia):
+def create_producto(datos_producto: ProductoCreate, session: SessionDeDependencia, token: Token_Dependencia):
+
+    if token['id_rol'] != 1:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="No autorizado")
+
     consulta = select(Categoria).where(
         Categoria.id == datos_producto.id_categoria
     )
@@ -58,7 +64,12 @@ def create_producto(datos_producto: ProductoCreate, session: SessionDeDependenci
 
 
 @router.delete("/productos/{id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_producto(id: int, session: SessionDeDependencia):
+def delete_producto(id: int, session: SessionDeDependencia, token: Token_Dependencia):
+
+    if token['id_rol'] != 1:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="No autorizado")
+
     consulta = select(Producto).where(Producto.id == id)
     resultado_de_consulta = session.exec(consulta).first()
     if not resultado_de_consulta:
@@ -70,7 +81,12 @@ def delete_producto(id: int, session: SessionDeDependencia):
 
 
 @router.put("/productos/{id}", response_model=Producto, status_code=status.HTTP_200_OK)
-def update_producto(id: int, datos_producto: ProductoUpdate, session: SessionDeDependencia):
+def update_producto(id: int, datos_producto: ProductoUpdate, session: SessionDeDependencia, token: Token_Dependencia):
+
+    if token['id_rol'] != 1:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="No autorizado")
+
     consulta = select(Producto).where(Producto.id == id)
     producto = session.exec(consulta).first()
 
@@ -103,7 +119,12 @@ def update_producto(id: int, datos_producto: ProductoUpdate, session: SessionDeD
 
 
 @router.patch("/productos/{id}", response_model=Producto, status_code=status.HTTP_200_OK)
-def patch_producto(id: int, datos_producto: ProductoUpdate, session: SessionDeDependencia):
+def patch_producto(id: int, datos_producto: ProductoUpdate, session: SessionDeDependencia, token: Token_Dependencia):
+
+    if token['id_rol'] != 1:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="No autorizado")
+
     consulta = select(Producto).where(Producto.id == id)
     producto = session.exec(consulta).first()
 

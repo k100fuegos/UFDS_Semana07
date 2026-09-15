@@ -6,6 +6,7 @@ from models.cliente import Cliente
 from models.usuario import Usuario
 from models.tipo_pago import TipoPago
 from models.venta import Venta, VentaCreate, VentaUpdate
+from config.security_Dependencia import Token_Dependencia
 
 router = APIRouter()
 
@@ -56,6 +57,7 @@ async def create_venta(datos_venta: VentaCreate, session: SessionDeDependencia):
         subtotal=datos_venta.subtotal,
         iva=datos_venta.iva,
         total=datos_venta.total,
+        estado=datos_venta.estado,
     )
     session.add(venta_nueva)
     session.commit()
@@ -64,12 +66,20 @@ async def create_venta(datos_venta: VentaCreate, session: SessionDeDependencia):
 
 
 @router.delete("/ventas/{id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_venta(id: int, session: SessionDeDependencia):
+async def delete_venta(id: int, session: SessionDeDependencia, token: Token_Dependencia):
+
+    if token['id_rol'] != 1:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="No tienes permisos para acceder a esta information")
+
     consulta = select(Venta).where(Venta.id == id)
     resultado = session.exec(consulta).first()
     if not resultado:
         raise HTTPException(status_code=404, detail="Venta no encontrada")
-    session.delete(resultado)
+
+    resultado.estado = "ANULADA"
+    resultado.updated_at = datetime.utcnow()
+    session.add(resultado)
     session.commit()
     return None
 
@@ -106,6 +116,7 @@ async def update_venta(id: int, datos_venta: VentaUpdate, session: SessionDeDepe
     resultado.subtotal = datos_venta.subtotal
     resultado.iva = datos_venta.iva
     resultado.total = datos_venta.total
+    resultado.estado = datos_venta.estado
     resultado.updated_at = datetime.utcnow()
 
     session.add(resultado)

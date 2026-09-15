@@ -5,6 +5,7 @@ from config.session_Dependencia import SessionDeDependencia
 from models.producto import Producto
 from models.venta import Venta
 from models.detalle_venta import DetalleVenta, DetalleVentaCreate, DetalleVentaUpdate
+from config.security_Dependencia import Token_Dependencia
 
 router = APIRouter()
 
@@ -56,21 +57,32 @@ async def create_detalle_venta(datos_detalle: DetalleVentaCreate, session: Sessi
 
 
 @router.delete("/detalle-ventas/{id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_detalle_venta(id: int, session: SessionDeDependencia):
+async def delete_detalle_venta(id: int, session: SessionDeDependencia, token: Token_Dependencia):
+
     consulta = select(DetalleVenta).where(DetalleVenta.id == id)
     resultado = session.exec(consulta).first()
     if not resultado:
         raise HTTPException(
             status_code=404, detail="Detalle de venta no encontrado")
+
+    if token['id_rol'] != 1 and resultado.estado == "FINALIZADA":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="No tienes permisos para eliminar un detalle de venta finalizada")
+
     session.delete(resultado)
     session.commit()
     return None
 
 
 @router.put("/detalle-ventas/{id}", response_model=DetalleVenta, status_code=status.HTTP_200_OK)
-async def update_detalle_venta(id: int, datos_detalle: DetalleVentaUpdate, session: SessionDeDependencia):
+async def update_detalle_venta(id: int, datos_detalle: DetalleVentaUpdate, session: SessionDeDependencia, token: Token_Dependencia = Token_Dependencia()):
     consulta = select(DetalleVenta).where(DetalleVenta.id == id)
     resultado = session.exec(consulta).first()
+
+    if token['id_rol'] != 1 and resultado.estado == "FINALIZADA":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="No tienes permisos para actualizar un detalle de venta finalizada")
+
     if not resultado:
         raise HTTPException(
             status_code=404, detail="Detalle de venta no encontrado")

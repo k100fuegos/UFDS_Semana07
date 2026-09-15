@@ -3,21 +3,34 @@ from fastapi import APIRouter, HTTPException, status, Query
 from sqlmodel import select
 from config.session_Dependencia import SessionDeDependencia
 from models.rol import Rol, RolCreate, RolUpdate
+from config.security_Dependencia import Token_Dependencia
 
 router = APIRouter()
 
 
 @router.get("/roles", response_model=list[Rol], status_code=status.HTTP_200_OK)
 async def get_roles(session: SessionDeDependencia,
+                    token: Token_Dependencia,
                     offset: int = Query(0, ge=0),
-                    limit: int = Query(20, ge=1)):
+                    limit: int = Query(20, ge=1),
+                    ):
+
+    if token['id_rol'] != 1:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="No tienes permisos para acceder a esta information")
+
     consulta = select(Rol).offset(offset).limit(limit)
     resultado = session.exec(consulta)
     return resultado.all()
 
 
 @router.get("/roles/{id}", response_model=Rol, status_code=status.HTTP_200_OK)
-async def get_rol(id: int, session: SessionDeDependencia):
+async def get_rol(id: int, session: SessionDeDependencia, token: Token_Dependencia):
+
+    if token['id_rol'] != 1:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="No tienes permisos para acceder a esta information")
+
     consulta = select(Rol).where(Rol.id == id)
     resultado = session.exec(consulta).first()
     if not resultado:
@@ -26,7 +39,12 @@ async def get_rol(id: int, session: SessionDeDependencia):
 
 
 @router.post("/roles", response_model=Rol, status_code=status.HTTP_201_CREATED)
-async def create_rol(datos_rol: RolCreate, session: SessionDeDependencia):
+async def create_rol(datos_rol: RolCreate, session: SessionDeDependencia,  token: Token_Dependencia):
+
+    if token['id_rol'] != 1:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="No tienes permisos para acceder a esta information")
+
     rol_nuevo = Rol(nombre=datos_rol.nombre, descripcion=datos_rol.descripcion)
     session.add(rol_nuevo)
     session.commit()
@@ -35,7 +53,12 @@ async def create_rol(datos_rol: RolCreate, session: SessionDeDependencia):
 
 
 @router.delete("/roles/{id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_rol(id: int, session: SessionDeDependencia):
+async def delete_rol(id: int, session: SessionDeDependencia, token: Token_Dependencia):
+
+    if token['id_rol'] != 1:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="No tienes permisos para acceder a esta information")
+
     consulta = select(Rol).where(Rol.id == id)
     resultado = session.exec(consulta).first()
     if not resultado:
@@ -46,7 +69,12 @@ async def delete_rol(id: int, session: SessionDeDependencia):
 
 
 @router.put("/roles/{id}", response_model=Rol, status_code=status.HTTP_200_OK)
-async def update_rol(id: int, datos_rol: RolUpdate, session: SessionDeDependencia):
+async def update_rol(id: int, datos_rol: RolUpdate, session: SessionDeDependencia, token: Token_Dependencia):
+
+    if token['id_rol'] != 1:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="No tienes permisos para acceder a esta information")
+
     consulta = select(Rol).where(Rol.id == id)
     resultado = session.exec(consulta).first()
     if not resultado:

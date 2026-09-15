@@ -1,6 +1,13 @@
 from decimal import Decimal
 from datetime import datetime
 from sqlmodel import SQLModel, Field
+from enum import Enum
+
+
+class EstadoVenta(str, Enum):
+    PENDIENTE = "PENDIENTE"
+    FINALIZADA = "FINALIZADA"
+    ANULADA = "ANULADA"
 
 
 class VentaBase(SQLModel):
@@ -11,6 +18,7 @@ class VentaBase(SQLModel):
     subtotal: Decimal = Field(nullable=False, ge=0)
     iva: Decimal = Field(nullable=False, ge=0)
     total: Decimal = Field(nullable=False, ge=0)
+    estado: EstadoVenta = Field(nullable=False)
 
 
 class Venta(VentaBase, table=True):

@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, status, Query
 from sqlmodel import select
 from config.session_Dependencia import SessionDeDependencia
 from models.cliente import Cliente, ClienteCreate, ClienteUpdate
+from config.security_Dependencia import Token_Dependencia
 
 router = APIRouter()
 
@@ -41,7 +42,12 @@ async def create_cliente(datos_cliente: ClienteCreate, session: SessionDeDepende
 
 
 @router.delete("/clientes/{id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_cliente(id: int, session: SessionDeDependencia):
+async def delete_cliente(id: int, session: SessionDeDependencia, token: Token_Dependencia):
+
+    if token['id_rol'] != 1:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="No tienes permisos para acceder a esta information")
+
     consulta = select(Cliente).where(Cliente.id == id)
     resultado = session.exec(consulta).first()
     if not resultado:
